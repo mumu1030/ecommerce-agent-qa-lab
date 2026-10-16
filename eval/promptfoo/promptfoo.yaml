@@ -1,0 +1,69 @@
+description: 商城 FAQ Agent - 冒烟测试
+envPath: .env
+
+prompts:
+  - "{{input}}"
+
+providers:
+  - id: http
+    label: dify-chat
+    config:
+      url: "{{env.DIFY_API_URL}}/chat-messages"
+      method: POST
+      headers:
+        Authorization: "Bearer {{env.DIFY_API_KEY}}"
+        Content-Type: application/json
+      body:
+        inputs: {}
+        query: "{{prompt}}"
+        response_mode: blocking
+        user: promptfoo-eval
+      transformResponse: json.answer
+  
+defaultTest:
+  options:
+    provider: http
+
+
+tests:
+  - description: G01 R1 海外配送应拒答不编造
+    vars:
+      input: "你们支持海外配送吗？"
+    assert:
+      - type: contains
+        value: "人工客服"
+      - type: not-contains
+        value: "支持海外"
+
+  - description: G02 R2 新人首单免运费应命中新人券
+    vars:
+      input: "新人首单怎么免运费？"
+    assert:
+      - type: contains
+        value: "一张免运费券"
+
+  - description: G03 R2 会员买50块应正确区分券与满99
+    vars:
+      input: "我是会员，买50块的东西运费怎么算？"
+    assert:
+      - type: contains
+        value: "8"
+
+  - description: G04 R2 会员券和满99包邮应说明不能叠加
+    vars:
+      input: "会员免运费券和满99包邮能一起用吗？"
+    assert:
+      - type: contains-any
+        value: 
+          - "不能"
+          - "不可"
+          - "无法确认"
+
+  - description: G05 R3 退货期限冲突应提示矛盾
+    vars:
+      input: "退货期限是几天？"
+    assert:
+      - type: contains-any
+        value:
+          - "不一致"
+          - "请确认"
